@@ -3,6 +3,12 @@
 ![image2](Images/karesansui_2.png)
 ![image3](Images/karesansui_3.png)
 
+## Recommended Environment
+This tool is designed for use on a PC with the Google Chrome browser. Operation on other devices or browsers is not guaranteed.
+
+## 推奨環境
+このツールは、PC上のGoogle Chromeブラウザでの使用を想定しています。他のデバイスやブラウザでの動作は保証されていません。
+
 ## Demo
 You can try this tool on the page below.
 
@@ -18,12 +24,6 @@ This is a web tool that allows you to draw patterns on a sand canvas. By using t
 
 ## 概要
 これは、砂のキャンバスに模様を描くことができるwebツールです。マウスをブラシや熊手として使い、砂を掘ったり平らにならしたりすることで、枯山水をデザインできます。
-
-## Recommended Environment
-This tool is designed for use on a PC with the Google Chrome browser. Operation on other devices or browsers is not guaranteed.
-
-## 推奨環境
-このツールは、PC上のGoogle Chromeブラウザでの使用を想定しています。他のデバイスやブラウザでの動作は保証されていません。
 
 ## Controls
 ### Mouse Controls
