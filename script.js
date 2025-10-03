@@ -255,7 +255,21 @@ function drawLineOnGrid(x0, y0, x1, y1, onPixel) {
     }
 }
 
+// ★★★ 変更: 画像保存機能を修正 ★★★
 function saveCanvasAsPNG() {
+    // 一時的なCanvasを作成して、指定のサイズに縮小して描画
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // Grain sizeに応じた出力サイズを計算
+    const outputSize = 720 / params.grainSize;
+    tempCanvas.width = outputSize;
+    tempCanvas.height = outputSize;
+    
+    // 現在のCanvasの内容を一時的なCanvasに縮小して描画
+    tempCtx.drawImage(canvas, 0, 0, outputSize, outputSize);
+
+    // タイムスタンプ付きのファイル名を生成
     const date = new Date();
     const timestamp = date.getFullYear() +
         ('0' + (date.getMonth() + 1)).slice(-2) +
@@ -264,11 +278,14 @@ function saveCanvasAsPNG() {
         ('0' + date.getMinutes()).slice(-2) +
         ('0' + date.getSeconds()).slice(-2);
     const filename = `karesansui_${timestamp}.png`;
+    
+    // ダウンロードリンクを作成してクリック
     const link = document.createElement('a');
     link.download = filename;
-    link.href = canvas.toDataURL('image/png');
+    link.href = tempCanvas.toDataURL('image/png'); // 一時的なCanvasから画像データを取得
     link.click();
 }
+
 
 function generateColorPalette(topColorHex, bottomColorHex, steps) {
     const parseColor = (hex) => {
@@ -389,7 +406,8 @@ function animationLoop(currentTimestamp) {
 
 window.addEventListener('load', () => {
     const gui = new GUI();
-    gui.add(params, 'grainSize', 1, 10, 1).name('Grain Size').onFinishChange(() => {
+    // ★★★ 変更: Grain Sizeの最大値を10から6に変更 ★★★
+    gui.add(params, 'grainSize', 1, 6, 1).name('Grain Size').onFinishChange(() => {
         initGrid();
         drawGravel(null);
         ctx.putImageData(imageData, 0, 0);
