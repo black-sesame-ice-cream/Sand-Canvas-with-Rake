@@ -1,5 +1,6 @@
 import { GUI } from 'https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm';
 
+// HTMLからcanvas要素を取得
 const canvas = document.getElementById('sand-canvas');
 const ctx = canvas.getContext('2d');
 const uiCanvas = document.getElementById('ui-canvas');
@@ -10,6 +11,7 @@ const CANVAS_WIDTH = 720;
 const CANVAS_HEIGHT = 720;
 
 const params = {
+    // GUIでズーム率を操作するためのパラメータ
     zoom: 1,
     grainSize: 3,
     digBrushRadius: 10,
@@ -18,6 +20,7 @@ const params = {
     digDepth: 100,
     shadowIntensity: 0.8,
     highlightIntensity: 0.4,
+    // ★★★ 変更: 光の方向のデフォルト値を変更 ★★★
     lightDirection: 'Left',
     topColor: '#FFFFFF',
     bottomColor: '#000000',
@@ -58,7 +61,7 @@ let isAutoRotating = false;
 let lastTimestamp = 0;
 
 let lastScale = 1;
-
+// GUIコントローラーを格納する変数
 let zoomController;
 
 function isPivotTine(index, totalTines, pivotsPerSide) {
@@ -85,41 +88,70 @@ function getTinePositions() {
     return positions;
 }
 
+// ★★★ 変更: 仮想ピクセル(パディング)を含むグリッドを初期化 ★★★
 function initGrid() {
-    gridWidth = Math.ceil(canvas.width / params.grainSize);
-    gridHeight = Math.ceil(canvas.height / params.grainSize);
+    // 表示されるグリッドのサイズ
+    const visibleGridWidth = Math.ceil(canvas.width / params.grainSize);
+    const visibleGridHeight = Math.ceil(canvas.height / params.grainSize);
+
+    // 上下左右に1ピクセルずつパディングを追加した、実際のデータ上のグリッドサイズ
+    gridWidth = visibleGridWidth + 2;
+    gridHeight = visibleGridHeight + 2;
+    
     imageData = ctx.createImageData(canvas.width, canvas.height);
+    
+    // パディングを含んだサイズのheightMapを生成
     heightMap = Array(gridHeight).fill(0).map(() => Array(gridWidth).fill(0).map(() => {
         const randomIndex = getRandomNormalIndex(INITIAL_HEIGHT_PALETTE.length);
         return INITIAL_HEIGHT_PALETTE[randomIndex];
     }));
-    rake.center = { x: gridWidth / 2, y: gridHeight / 2 };
+    
+    // Rakeの中心は表示領域の中心に設定
+    rake.center = { x: visibleGridWidth / 2, y: visibleGridHeight / 2 };
 }
 
+// ★★★ 変更: 仮想ピクセルを考慮した描画と、新しい光の計算ロジック ★★★
 function drawGravel(rect = null) {
-    const startX = rect ? rect.x : 0,
-        startY = rect ? rect.y : 0,
-        endX = rect ? rect.x + rect.width : gridWidth,
-        endY = rect ? rect.y + rect.height : gridHeight;
+    // rectが指定されている場合は、パディング分座標をずらす
+    const startX = rect ? rect.x + 1 : 1;
+    const startY = rect ? rect.y + 1 : 1;
+    const endX = rect ? rect.x + rect.width + 1 : gridWidth - 1;
+    const endY = rect ? rect.y + rect.height + 1 : gridHeight - 1;
 
-    const clampedStartX = Math.max(0, startX),
-        clampedStartY = Math.max(0, startY),
-        clampedEndX = Math.min(gridWidth, endX),
-        clampedEndY = Math.min(gridHeight, endY);
+    const clampedStartX = Math.max(1, startX);
+    const clampedStartY = Math.max(1, startY);
+    const clampedEndX = Math.min(gridWidth - 1, endX);
+    const clampedEndY = Math.min(gridHeight - 1, endY);
 
     const grainSize = params.grainSize;
     const canvasWidth = canvas.width;
 
+    // 表示領域のみをループ (パディングの1px分は除く)
     for (let y = clampedStartY; y < clampedEndY; y++) {
         for (let x = clampedStartX; x < clampedEndX; x++) {
             const baseHeight = heightMap[y][x];
             let lightAmount = 0;
-            if (x > 0 && heightMap[y][x] > heightMap[y][x - 1]) lightAmount += baseHeight * params.highlightIntensity;
-            if (x < gridWidth - 1 && heightMap[y][x] > heightMap[y][x + 1]) lightAmount -= baseHeight * params.shadowIntensity;
-            if (params.lightDirection === 'Top-Left') {
-                if (y > 0 && heightMap[y][x] > heightMap[y - 1][x]) lightAmount += baseHeight * params.highlightIntensity * 0.5;
-                if (y < gridHeight - 1 && heightMap[y][x] > heightMap[y + 1][x]) lightAmount -= baseHeight * params.shadowIntensity * 0.5;
+
+            // ★★★ 変更: 計算ロジックを以前のバージョンに戻し、光の方向に対応 ★★★
+            switch (params.lightDirection) {
+                case 'Left':
+                    if (heightMap[y][x] > heightMap[y][x - 1]) lightAmount += baseHeight * params.highlightIntensity;
+                    if (heightMap[y][x] > heightMap[y][x + 1]) lightAmount -= baseHeight * params.shadowIntensity;
+                    break;
+                case 'Right':
+                    if (heightMap[y][x] > heightMap[y][x + 1]) lightAmount += baseHeight * params.highlightIntensity;
+                    if (heightMap[y][x] > heightMap[y][x - 1]) lightAmount -= baseHeight * params.shadowIntensity;
+                    break;
+                case 'Up':
+                    if (heightMap[y][x] > heightMap[y - 1][x]) lightAmount += baseHeight * params.highlightIntensity;
+                    if (heightMap[y][x] > heightMap[y + 1][x]) lightAmount -= baseHeight * params.shadowIntensity;
+                    break;
+                case 'Down':
+                    if (heightMap[y][x] > heightMap[y + 1][x]) lightAmount += baseHeight * params.highlightIntensity;
+                    if (heightMap[y][x] > heightMap[y - 1][x]) lightAmount -= baseHeight * params.shadowIntensity;
+                    break;
             }
+
             const paletteSteps = 256;
             const paletteIndex = Math.min(paletteSteps - 1, Math.floor((baseHeight / 255) * paletteSteps));
             const baseColor = colorPalette[paletteIndex];
@@ -130,8 +162,9 @@ function drawGravel(rect = null) {
 
                 for (let py = 0; py < grainSize; py++) {
                     for (let px = 0; px < grainSize; px++) {
-                        const canvasX = x * grainSize + px;
-                        const canvasY = y * grainSize + py;
+                        // imageDataに書き込む際は、パディング分(x-1, y-1)を引いて座標を合わせる
+                        const canvasX = (x - 1) * grainSize + px;
+                        const canvasY = (y - 1) * grainSize + py;
                         const index = (canvasY * canvasWidth + canvasX) * 4;
                         imageData.data[index] = finalR;
                         imageData.data[index + 1] = finalG;
@@ -144,6 +177,7 @@ function drawGravel(rect = null) {
     }
 }
 
+// ★★★ 変更: 仮想ピクセルを考慮したブラシ処理 ★★★
 function applyBrush(mouseGridX, mouseGridY) {
     const currentBrushRadius = (currentTool === 'dig') ? params.digBrushRadius : params.resetBrushRadius;
     const baseOuterRadius = currentBrushRadius;
@@ -162,8 +196,11 @@ function applyBrush(mouseGridX, mouseGridY) {
             const distanceSq = x * x + y * y;
             if (distanceSq > interpolatedOuterRadius * interpolatedOuterRadius) continue;
 
-            const targetX = mouseGridX + x;
-            const targetY = mouseGridY + y;
+            // heightMap上の座標(パディング分+1)
+            const targetX = mouseGridX + x + 1;
+            const targetY = mouseGridY + y + 1;
+
+            // 境界チェックはパディングを含むgridWidth/gridHeightで行う
             if (targetX >= 0 && targetX < gridWidth && targetY >= 0 && targetY < gridHeight) {
                 const distance = Math.sqrt(distanceSq);
                 if (distanceSq <= innerRadiusSq) {
@@ -211,6 +248,7 @@ function applyBrush(mouseGridX, mouseGridY) {
         });
     }
 
+    // dirtyRectは表示領域の座標で管理
     const updateRect = {
         x: mouseGridX - maxPossibleRadius - 1,
         y: mouseGridY - maxPossibleRadius - 1,
@@ -218,10 +256,13 @@ function applyBrush(mouseGridX, mouseGridY) {
         height: maxPossibleRadius * 2 + 2
     };
 
+    // heightMapへの書き込みはパディングを考慮
     for (let y = Math.floor(updateRect.y); y < updateRect.y + updateRect.height; y++) {
         for (let x = Math.floor(updateRect.x); x < updateRect.x + updateRect.width; x++) {
-            if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
-                heightMap[y][x] = Math.max(0, Math.min(255, heightMap[y][x]));
+            const mapX = x + 1;
+            const mapY = y + 1;
+            if (mapX >= 0 && mapX < gridWidth && mapY >= 0 && mapY < gridHeight) {
+                heightMap[mapY][mapX] = Math.max(0, Math.min(255, heightMap[mapY][mapX]));
             }
         }
     }
@@ -433,7 +474,8 @@ window.addEventListener('load', () => {
         drawGravel(null);
         ctx.putImageData(imageData, 0, 0);
     });
-    appearanceFolder.add(params, 'lightDirection', ['Top-Left', 'Left']).name('Light Direction').onFinishChange(() => {
+    // ★★★ 変更: 光の方向の選択肢をGUIに設定 ★★★
+    appearanceFolder.add(params, 'lightDirection', ['Left', 'Right', 'Up', 'Down']).name('Light Direction').onFinishChange(() => {
         drawGravel(null);
         ctx.putImageData(imageData, 0, 0);
     });
