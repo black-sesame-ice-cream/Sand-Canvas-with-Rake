@@ -1,15 +1,16 @@
 import { GUI } from 'https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm';
 
-// HTMLからcanvas要素を取得
 const canvas = document.getElementById('sand-canvas');
 const ctx = canvas.getContext('2d');
 const uiCanvas = document.getElementById('ui-canvas');
 const uiCtx = uiCanvas.getContext('2d');
+const canvasContainer = document.getElementById('canvas-container');
 
 const CANVAS_WIDTH = 720;
 const CANVAS_HEIGHT = 720;
 
 const params = {
+    zoom: 1,
     grainSize: 3,
     digBrushRadius: 10,
     resetBrushRadius: 20,
@@ -27,7 +28,6 @@ const params = {
         drawGravel(null);
         ctx.putImageData(imageData, 0, 0);
     },
-    // GUI操作用の関数を追加
     save: saveCanvasAsPNG,
     rakeHorizontal: () => { rake.angle = 0; },
     rakeVertical: () => { rake.angle = Math.PI / 2; }
@@ -56,6 +56,10 @@ let rake = {
 let isRakeMode = false;
 let isAutoRotating = false;
 let lastTimestamp = 0;
+
+let lastScale = 1;
+
+let zoomController;
 
 function isPivotTine(index, totalTines, pivotsPerSide) {
     if (index === Math.floor(totalTines / 2)) return false;
@@ -255,21 +259,13 @@ function drawLineOnGrid(x0, y0, x1, y1, onPixel) {
     }
 }
 
-// ★★★ 変更: 画像保存機能を修正 ★★★
 function saveCanvasAsPNG() {
-    // 一時的なCanvasを作成して、指定のサイズに縮小して描画
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
-    
-    // Grain sizeに応じた出力サイズを計算
     const outputSize = 720 / params.grainSize;
     tempCanvas.width = outputSize;
     tempCanvas.height = outputSize;
-    
-    // 現在のCanvasの内容を一時的なCanvasに縮小して描画
     tempCtx.drawImage(canvas, 0, 0, outputSize, outputSize);
-
-    // タイムスタンプ付きのファイル名を生成
     const date = new Date();
     const timestamp = date.getFullYear() +
         ('0' + (date.getMonth() + 1)).slice(-2) +
@@ -278,14 +274,11 @@ function saveCanvasAsPNG() {
         ('0' + date.getMinutes()).slice(-2) +
         ('0' + date.getSeconds()).slice(-2);
     const filename = `karesansui_${timestamp}.png`;
-    
-    // ダウンロードリンクを作成してクリック
     const link = document.createElement('a');
     link.download = filename;
-    link.href = tempCanvas.toDataURL('image/png'); // 一時的なCanvasから画像データを取得
+    link.href = tempCanvas.toDataURL('image/png');
     link.click();
 }
-
 
 function generateColorPalette(topColorHex, bottomColorHex, steps) {
     const parseColor = (hex) => {
@@ -340,15 +333,14 @@ function getInterpolatedRadius(x, y, shape) {
     return radius1 * (1 - blend) + radius2 * blend;
 }
 
-
 function drawRakeCursor() {
     if (!isRakeMode) return;
     const tinePositions = getTinePositions();
-    const cursorRadius = params.grainSize * 2.5;
+    const cursorRadius = params.grainSize * 2.5 * lastScale;
     const sandRect = canvas.getBoundingClientRect();
 
     uiCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-    uiCtx.lineWidth = 2;
+    uiCtx.lineWidth = 2 * lastScale;
 
     const halfCount = Math.floor(params.tineCount / 2);
 
@@ -361,8 +353,8 @@ function drawRakeCursor() {
             uiCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         }
 
-        const px = (pos.x * params.grainSize) + sandRect.left;
-        const py = (pos.y * params.grainSize) + sandRect.top;
+        const px = (pos.x * params.grainSize * lastScale) + sandRect.left;
+        const py = (pos.y * params.grainSize * lastScale) + sandRect.top;
         uiCtx.beginPath();
         uiCtx.arc(px, py, cursorRadius, 0, Math.PI * 2);
         uiCtx.fill();
@@ -370,12 +362,12 @@ function drawRakeCursor() {
     });
 }
 
+
 function animationLoop(currentTimestamp) {
     const deltaTime = (currentTimestamp - lastTimestamp) / 1000;
     lastTimestamp = currentTimestamp;
 
     if (isAutoRotating) {
-        // ★★★ 変更: 回転スピードを半分に ★★★
         const rotationSpeed = Math.PI;
         const lastPositions = getTinePositions();
         rake.angle += rotationSpeed * deltaTime;
@@ -406,7 +398,13 @@ function animationLoop(currentTimestamp) {
 
 window.addEventListener('load', () => {
     const gui = new GUI();
-    // ★★★ 変更: Grain Sizeの最大値を10から6に変更 ★★★
+    
+    zoomController = gui.add(params, 'zoom', 0.5, 1.0, 0.01).name('Zoom');
+    zoomController.onChange((value) => {
+        lastScale = value;
+        canvasContainer.style.transform = `scale(${value})`;
+    });
+
     gui.add(params, 'grainSize', 1, 6, 1).name('Grain Size').onFinishChange(() => {
         initGrid();
         drawGravel(null);
@@ -483,11 +481,10 @@ window.addEventListener('keydown', (e) => {
         saveCanvasAsPNG();
     } else if (e.key === 'k' || e.key === 'K') {
         isRakeMode = !isRakeMode;
-        // params.isRakeMode = isRakeMode; // GUIと連動する必要がなくなったので削除
         if (isRakeMode) {
             const rect = canvas.getBoundingClientRect();
-            const mouseXOnCanvas = mouseX - rect.left;
-            const mouseYOnCanvas = mouseY - rect.top;
+            const mouseXOnCanvas = (mouseX - rect.left) / lastScale;
+            const mouseYOnCanvas = (mouseY - rect.top) / lastScale;
             rake.center.x = Math.floor(mouseXOnCanvas / params.grainSize);
             rake.center.y = Math.floor(mouseYOnCanvas / params.grainSize);
         }
@@ -504,8 +501,8 @@ window.addEventListener('mousedown', (e) => {
     isDrawing = true;
     currentTool = (e.button === 0) ? 'dig' : 'reset';
     const rect = canvas.getBoundingClientRect();
-    const mouseXOnCanvas = e.clientX - rect.left;
-    const mouseYOnCanvas = e.clientY - rect.top;
+    const mouseXOnCanvas = (e.clientX - rect.left) / lastScale;
+    const mouseYOnCanvas = (e.clientY - rect.top) / lastScale;
     const currentGridX = Math.floor(mouseXOnCanvas / params.grainSize);
     const currentGridY = Math.floor(mouseYOnCanvas / params.grainSize);
 
@@ -560,8 +557,8 @@ window.addEventListener('mousemove', (e) => {
     if (!isDrawing || isAutoRotating) return;
 
     const rect = canvas.getBoundingClientRect();
-    const mouseXOnCanvas = e.clientX - rect.left;
-    const mouseYOnCanvas = e.clientY - rect.top;
+    const mouseXOnCanvas = (e.clientX - rect.left) / lastScale;
+    const mouseYOnCanvas = (e.clientY - rect.top) / lastScale;
     const currentGridX = Math.floor(mouseXOnCanvas / params.grainSize);
     const currentGridY = Math.floor(mouseYOnCanvas / params.grainSize);
 
@@ -635,3 +632,4 @@ window.addEventListener('mouseup', () => {
 });
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
