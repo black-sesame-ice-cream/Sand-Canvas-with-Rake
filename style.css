@@ -77,3 +77,19 @@ body, html {
     padding: 2px 4px; 
     border-radius: 3px; 
 }
+
+#github-link {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 9999;
+}
+
+#github-link .fa-github {
+    font-size: 32px;
+    color: #dddddd;
+}
+
+#github-link:hover .fa-github {
+    opacity: 0.7;
+}
