@@ -12,12 +12,12 @@ This tool is designed for use on a PC with the Google Chrome browser. Operation 
 ## Demo
 You can try this tool on the page below.
 
-https://black-sesame-ice-cream.github.io/Sand-Canvas-with-Rake/
+https://black-sesame-ice-cream.github.io/sand-canvas-with-rake/
 
 ## デモ
 以下のページでこのツールを試すことができます。
 
-https://black-sesame-ice-cream.github.io/Sand-Canvas-with-Rake/
+https://black-sesame-ice-cream.github.io/sand-canvas-with-rake/
 
 ## Overview
 This is a web tool that allows you to draw patterns on a sand canvas. By using the mouse as a brush or a rake, you can dig into the sand or smooth it out to design your own unique karesansui.
