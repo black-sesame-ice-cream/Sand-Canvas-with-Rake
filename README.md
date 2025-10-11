@@ -1,7 +1,7 @@
 # Sand Canvas with Rake
-![image1](Images/karesansui_1.png)
-![image2](Images/karesansui_2.png)
-![image3](Images/karesansui_3.png)
+![image1](images/karesansui_1.png)
+![image2](images/karesansui_2.png)
+![image3](images/karesansui_3.png)
 
 ## Recommended Environment
 This tool is designed for use on a PC with the Google Chrome browser. Operation on other devices or browsers is not guaranteed.
