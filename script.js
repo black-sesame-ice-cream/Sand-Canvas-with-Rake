@@ -1,4 +1,4 @@
-import { GUI } from 'lil-gui';
+import { GUI } from './node_modules/lil-gui/dist/lil-gui.esm.js';
 
 // HTMLからcanvas要素を取得
 const canvas = document.getElementById('sand-canvas');
