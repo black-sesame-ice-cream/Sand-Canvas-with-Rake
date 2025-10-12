@@ -1,5 +1,3 @@
-import { GUI } from './node_modules/lil-gui/dist/lil-gui.esm.js';
-
 // HTMLからcanvas要素を取得
 const canvas = document.getElementById('sand-canvas');
 const ctx = canvas.getContext('2d');
@@ -438,7 +436,7 @@ function animationLoop(currentTimestamp) {
 }
 
 window.addEventListener('load', () => {
-    const gui = new GUI();
+    const gui = new lil.GUI();
     
     zoomController = gui.add(params, 'zoom', 0.5, 1.0, 0.01).name('Zoom');
     zoomController.onChange((value) => {
