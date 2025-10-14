@@ -99,6 +99,20 @@ Kキーを押すと熊手モードに切り替わります。熊手が表示さ�
 
 - Actions: 熊手の向きの変更、保存、リセットなど、主要な操作を行うためのボタンです。
 
+## Licenses
+Please see below for details.
+
+[License](LICENSE/)
+
+[Third-Party Licenses](THIRD-PARTY-LICENSES.txt/)
+
+## ライセンス
+以下を参照してください。
+
+[ライセンス](LICENSE/)
+
+[第三者ライセンス](THIRD-PARTY-LICENSES.txt/)
+
 ## Tech Stack
 HTML5 Canvas: For rendering the sand and patterns.
 
